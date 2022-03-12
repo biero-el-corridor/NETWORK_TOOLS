@@ -17,6 +17,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-DBfile', help='put the DB file name',type=str)
+parser.add_argument('-o', help='put the name of the output fie',type=str)
 args = parser.parse_args()
 
 def Connect_Try(ip,user,pwd,port,command):
@@ -33,20 +34,36 @@ def Connect_Try(ip,user,pwd,port,command):
     stdin, stdout, stderr = ssh.exec_command("id")
     lines = stdout.readlines()
     print(f' the IP {ip} can connect. Here your id {lines} \n')
+    
+    with open(args.o, "a") as res: 
+        res.write("\n")
+        res.write("*******************************************")
+        res.write("\n")
+        res.write(f'begening of the command impout on the IP :{ip}\n')
+        res.write("*******************************************")
+        res.write("\n")
+        if (len(command) != 1):
+            
+            #si il y a plusieur command
+            while(CountCMDLine != TotalCMDline): 
+                stdin, stdout, stderr = ssh.exec_command(str(command[CountCMDLine]))
+                lines = stdout.readlines()
+                print(lines)
+                #va écrire dans le fichier le résultat de la commande
+                res.write(f'result of the {str(command[CountCMDLine])} command on the IP: {ip}\n')
+                res.write(str(lines))
+                res.write("\n")
+                res.write("\n")
 
-    if (len(command) != 1):
-        
-        #si il y a plusieur command
-        while(CountCMDLine != TotalCMDline): 
-            stdin, stdout, stderr = ssh.exec_command(str(command[CountCMDLine]))
+                CountCMDLine += 1
+
+        else: 
+            #si il n'y a qu'une commande donnée en paramétre
+            stdin, stdout, stderr = ssh.exec_command(str(command[0]))
             lines = stdout.readlines()
             print(lines)
-            CountCMDLine += 1
-    else: 
-        #si il n'y a qu'une commande donnée en paramétre
-        stdin, stdout, stderr = ssh.exec_command(str(command[0]))
-        lines = stdout.readlines()
-        print(lines)
+            res.write(f'result of the {str(command)} command on the IP: {ip}\n')
+            res.write(str(lines))
 
 ##1er test avec seulement la list des ip
 if __name__ == "__main__":

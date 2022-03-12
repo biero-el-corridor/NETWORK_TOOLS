@@ -3,142 +3,74 @@
 Created on Mon Jan 31 10:10:41 2022
 
 @author: ecordier
-
 Name: Automated Remote Ssh Command Testing  ARSCT
 
 Nedeed: 
     argpars for:
         port connetions
-
+https://phoenixnap.com/kb/install-pip-windows
 """
 
+from ast import arg
 import paramiko
 import argparse
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument('-IPfile', '--IPfile' , help='put the absolute or relative path to the file that contain your IP list',type=str)
-parser.add_argument('-PWDfile', '--PWDfile' , help='put the absolute or relative path to the file that contain your Password ',type=str)
-parser.add_argument('-CMDfile', '--CMDfile' , help='put the absolute or relative path to the file that contain your command',type=str)
-
+parser.add_argument('-DBfile', help='put the DB file name',type=str)
 args = parser.parse_args()
 
-
-#use a funtions to open the file 
-def Readlines(FileName, Type):
-    
-    #this table containe eatch line of the file
-    FTable = []
-    
-    with open(FileName, Type) as Flist:
-        Flines = Flist.readlines()
-        
-        for Fline in Flines:
-            #the tab is going to be fill with the lines of the file
-            FTable.append(Fline)
-            
-        
-        return FTable
-            
-
-def Connect_Try(IP,user,pas,command):
-    host = IP
-    username = user
-    password = pas
-    port = "22"
-    command = command
-    host = host.replace("\n", '')
+def Connect_Try(ip,user,pwd,port,command):
+    CountCMDLine = 0
+    TotalCMDline = len(command)
     try:
+        #connections sur la machine distante
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        ssh.connect(host, port, username, password)
-        
-        stdin, stdout, stderr = ssh.exec_command(command)
-        lines = stdout.readlines()
-        print("")
-        print(f' the IP {host} can connect. Here your id {lines} \n')
-        
-        
-        #####################################################"
-        ############CMDFile read sections####################
-        #####################################################
-        CMDline = Readlines(args.CMDfile, "r")
-        CountCMD  = 0
-        LenOfCMDLines = len(CMDline)
-        #####################################################
-        #####################################################
-        
-        while CountCMD != LenOfCMDLines:
-            
-            stdin, stdout, stderr = ssh.exec_command(CMDline[CountCMD])
-            lines = stdout.readlines()
-            
-            print(f' (root)# {CMDline[CountCMD]} \n')
-            print(str(lines))
-            print('\n')
-            
-            CountCMD += 1
-        
+        ssh.connect(hostname=ip, username=user, password=pwd, timeout=4)
     except:
-        print("cannot reatch the ip or ssh service of the IP \n")
+        print("cannot reatch the ip or ssh service of the IP \n")    
+    
+    stdin, stdout, stderr = ssh.exec_command("id")
+    lines = stdout.readlines()
+    print(f' the IP {ip} can connect. Here your id {lines} \n')
+
+    if (len(command) != 1):
         
-
-
-            
+        #si il y a plusieur command
+        while(CountCMDLine != TotalCMDline): 
+            stdin, stdout, stderr = ssh.exec_command(str(command[CountCMDLine]))
+            lines = stdout.readlines()
+            print(lines)
+            CountCMDLine += 1
+    else: 
+        #si il n'y a qu'une commande donnée en paramétre
+        stdin, stdout, stderr = ssh.exec_command(str(command[0]))
+        lines = stdout.readlines()
+        print(lines)
 
 ##1er test avec seulement la list des ip
 if __name__ == "__main__":
-    #####################################################"
-    ############IPFile read sections#####################
-    #####################################################
-
-    IPlines = Readlines(args.IPfile, "r")
-    CountIPLen  = 0
-    LenOfIPLines = len(IPlines)
-    
-    ######################################################
-    ######################################################
-    
-    #####################################################"
-    ############PWDFile read sections#####################
-    #####################################################   
-    
-    PWDlines = Readlines(args.PWDfile, "r")
-    CountPWDLen  = 0
-    LenOfPWDLines = len(PWDlines)
-    
-    ######################################################
-    ######################################################
-    
-    while CountIPLen != LenOfIPLines:
-        IPline = IPlines[CountIPLen]
-        IPline = IPline.replace("\n", '')
+    with open(args.DBfile, "r") as DBfile: 
+        lines = DBfile.readlines()
         
-        #sanitize chek of the IP string
-        if "." not in IPline and IPline[0].isdigit() == False :
+        for line in lines: 
+            #line.split("||")
+            line = str(line).split("||")
+            Name = line[0]
+            IP = line[1]
+            CRED = line[2]
+            CRED = CRED.split(";")
+            USER = CRED[0]
+            PWD = CRED[1]
+            PORT = line[3]
+            Command = line[4:-1]
+            print(len(Command))
             
-            print("your input dont have the standart IP format.")
-            break
-        
-        while CountPWDLen != LenOfPWDLines:
-            Credential = PWDlines[CountPWDLen].split(";")
-            Username = Credential[0]
-            Password = Credential[1]
-            print(IPline)
+            #sanitize chek of the IP string
+            if "." not in IP and IP[0].isdigit() == False :
+                
+                print("your input dont have the standart IP format.")
             try:
-                Connect_Try(IPline,Username,Password,"id")
-                CountPWDLen += 1
+                Connect_Try(IP,USER,PWD,PORT,Command)
             except: 
-                print(f'the password / username number {CountPWDLen} is not the good for this ip adress')
-            
-
-        CountPWDLen = 0
-        CountIPLen += 1
-    
-
-   
-
-
-        
-        
+                print(f'the password / username number  is not the good for this ip adress')
